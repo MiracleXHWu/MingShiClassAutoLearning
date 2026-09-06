@@ -1,0 +1,2 @@
+# MingShiClassAutoLearning
+明师课堂-幼儿园质量建设数字化平台自动学习
