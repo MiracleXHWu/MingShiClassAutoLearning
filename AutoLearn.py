@@ -1,5 +1,4 @@
 import random
-
 import requests
 import json
 from typing import Dict, Any
@@ -418,16 +417,14 @@ class MingShiClass:
 
 def main():
     """主函数 - 完整流程演示"""
-
     # 创建客户端
     client = MingShiClass()
-
     # 1. 登录
     print("\n" + "=" * 60)
     print("名师课堂 API 测试")
     print("=" * 60)
 
-    mobile = "13088960093"
+    mobile = "130xxxxxxx"
     password = "wuyanan123"
 
     login_result = client.login(mobile, password)
