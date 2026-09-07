@@ -9,7 +9,7 @@ import time
 class MingShiClass:
     """名师课堂API客户端"""
 
-    def __init__(self):
+    def __init__(self, file_size_at_path):
         self.base_url = "https://api.mingshiclass.com"
         self.session = requests.Session()
         self.token = None
@@ -33,14 +33,13 @@ class MingShiClass:
         }
 
         # 固定参数
-        self.file_size_at_path = "a9b7ba70783b617e9998dc4dd82eb3c5"
+        self.file_size_at_path = file_size_at_path
         self.client_source = "web"
         self.client_version = "1.0"
         self.enter_type = "integral"
 
         # 学习进度存储
         self.learning_progress = {}
-        self.completed_courses = set()
         self.current_course_id = None
 
     def login(self, mobile: str, password: str) -> Dict[str, Any]:
@@ -106,7 +105,7 @@ class MingShiClass:
                     }
                 else:
                     print(
-                        f"[失败] {result.get('header', {}).get('codeMsg', '未知错误')}"
+                        f"[登录失败] {result.get('header', {}).get('codeMsg', '未知错误')}"
                     )
                     return {
                         "success": False,
@@ -114,7 +113,7 @@ class MingShiClass:
                         "message": result.get("header", {}).get("codeMsg", "登录失败"),
                     }
             else:
-                print(f"[失败] HTTP状态码: {response.status_code}")
+                print(f"[登录失败] HTTP状态码: {response.status_code}")
                 return {
                     "success": False,
                     "status_code": response.status_code,
@@ -228,7 +227,7 @@ class MingShiClass:
                         ),
                     }
             else:
-                print(f"[失败] HTTP状态码: {response.status_code}")
+                print(f"[获取课程失败] HTTP状态码: {response.status_code}")
                 return {
                     "success": False,
                     "status_code": response.status_code,
@@ -236,7 +235,7 @@ class MingShiClass:
                 }
 
         except requests.exceptions.RequestException as e:
-            print(f"[错误] 请求失败: {e}")
+            print(f"[错误] 获取课程失败: {e}")
             return {"success": False, "error": str(e)}
 
     def get_course_details(self, coursepack_id: str) -> Dict[str, Any]:
@@ -289,11 +288,11 @@ class MingShiClass:
                     )
                     return []
             else:
-                print(f"  [失败] HTTP状态码: {response.status_code}")
+                print(f"  [获取课程信息失败] HTTP状态码: {response.status_code}")
                 return []
 
         except Exception as e:
-            print(f"  [错误] 获取课程列表失败: {e}")
+            print(f"  [错误] 获取课程信息失败: {e}")
             return []
 
     def submit_study_record(
@@ -354,13 +353,8 @@ class MingShiClass:
         print(f"  视频时长: {duration}秒")
 
         # 检查是否已学完
-        if learn_status == 2:  # 2表示已学完
+        if learn_status == 1:  # 1表示已学完
             print(f"  ✓ 已学完，跳过")
-            return True
-
-        # 检查是否已完成（自定义）
-        if course_id in self.completed_courses:
-            print(f"  ✓ 已完成，跳过")
             return True
 
         # 从上次学习位置继续
@@ -370,12 +364,10 @@ class MingShiClass:
         print(f"  上次学习位置: {current_time}秒")
         print(f"  开始学习...")
 
-        # 模拟学习过程（每次提交3-5秒的进度）
         total_learned = current_time
-
         # 分多次提交学习记录，模拟真实学习
         while total_learned < duration:
-            # 每次学习3-8秒
+            # 每次学习100-600秒
             learn_duration = random.randint(100, 600)
             total_learned += learn_duration
 
@@ -398,7 +390,6 @@ class MingShiClass:
                 # 检查是否学完
                 if total_learned >= duration:
                     print(f"  ✓ 学习完成!")
-                    self.completed_courses.add(course_id)
                     return True
             else:
                 print(f"  [警告] 提交学习记录失败")
@@ -409,7 +400,6 @@ class MingShiClass:
         # 检查是否学完
         if total_learned >= duration:
             print(f"  ✓ 学习完成!")
-            self.completed_courses.add(course_id)
             return True
 
         print(f"  ⚠ 学习中断，进度: {(total_learned/duration)*100:.1f}%")
@@ -417,18 +407,16 @@ class MingShiClass:
 
 
 def main():
-    """主函数 - 完整流程演示"""
-
-    # 创建客户端
-    client = MingShiClass()
-
     # 1. 登录
     print("\n" + "=" * 60)
     print("名师课堂 API 测试")
     print("=" * 60)
 
-    mobile = "13088960093"
-    password = "wuyanan123"
+    # 创建客户端
+    file_size_at_path = "a9b7ba70783b617e9998dc4dd82eb3c5"      # 可能需要修改
+    client = MingShiClass(file_size_at_path)
+    mobile = "130xxxxxxx"                                      # 需要修改
+    password = "wuyanan123"                                     # 需要修改
 
     login_result = client.login(mobile, password)
 
@@ -438,7 +426,6 @@ def main():
 
     print("\n" + "=" * 60)
     print("登录成功！继续获取课程列表...")
-    print("=" * 60)
 
     # 2. 获取课程列表（第一页）
     course_result = client.get_course_list(pageindex=1, count_of_page=20)
@@ -456,13 +443,17 @@ def main():
         courses = course_result.get("course_list", [])
         print("\n" + "=" * 60)
         print("【所有课程ID列表】")
-        print("=" * 60)
         for course in courses:
+            print("=" * 60)
             print(f"{course.get('coursepackName')}: {course.get('coursepackId')}")
             # 获取当前大课（coursepack）下的所有小课视频（courseId），并逐个播放
-            shixunCourseList = client.get_course_details(course.get("coursepackId"))
-            for shixunCourse in shixunCourseList:
-                client.learn_course(course=shixunCourse)
+            courseCount = course.get("courseCount")
+            studyCount = course.get("studyCount")
+            print(f"应学{courseCount}课，已学{studyCount}课。")
+            if courseCount > studyCount:
+                shixunCourseList = client.get_course_details(course.get("coursepackId"))
+                for shixunCourse in shixunCourseList:
+                    client.learn_course(course=shixunCourse)
 
 
 if __name__ == "__main__":

@@ -1,2 +1,4 @@
 # MingShiClassAutoLearning
 明师课堂-幼儿园质量建设数字化平台自动学习
+
+已实现明师课堂-幼儿园数字化培训课程体系平台的自动登陆、自动获取所有CoursePack，所有该CoursePack下面的所有视频列表，并自动学习。
