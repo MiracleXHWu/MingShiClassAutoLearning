@@ -7,7 +7,6 @@ import time
 
 class MingShiClass:
     """名师课堂API客户端"""
-
     def __init__(self, file_size_at_path):
         self.base_url = "https://api.mingshiclass.com"
         self.session = requests.Session()
@@ -39,16 +38,15 @@ class MingShiClass:
 
         # 学习进度存储
         self.learning_progress = {}
+        self.completed_courses = set()
         self.current_course_id = None
 
     def login(self, mobile: str, password: str) -> Dict[str, Any]:
         """
         用户登录
-
         Args:
             mobile: 手机号
             password: 密码
-
         Returns:
             dict: 登录结果
         """
@@ -73,10 +71,7 @@ class MingShiClass:
         print(f"请求URL: {url}")
 
         try:
-            response = self.session.post(
-                url, json=data, headers=self.headers, timeout=30
-            )
-
+            response = self.session.post(url, json=data, headers=self.headers, timeout=30)
             print(f"状态码: {response.status_code}")
 
             if response.status_code == 200:
@@ -215,9 +210,7 @@ class MingShiClass:
                         "current_page": pageindex,
                     }
                 else:
-                    print(
-                        f"[失败] {result.get('header', {}).get('codeMsg', '未知错误')}"
-                    )
+                    print(f"[失败] {result.get('header', {}).get('codeMsg', '未知错误')}")
                     return {
                         "success": False,
                         "data": result,
@@ -246,7 +239,6 @@ class MingShiClass:
             dict: 课程详情
         """
         url = f"{self.base_url}/shixun/getFreedomStudyCourseList1.0"
-
         data = {
             "sort": "",
             "courseTypeId": "",
@@ -274,7 +266,6 @@ class MingShiClass:
             response = self.session.post(
                 url, json=data, headers=self.headers, timeout=30
             )
-
             if response.status_code == 200:
                 result = response.json()
                 if result.get("header", {}).get("code") == "200":
@@ -299,7 +290,6 @@ class MingShiClass:
     ) -> bool:
         """提交学习记录"""
         url = f"{self.base_url}/shixun/submitStudyRecord1.0"
-
         data = {
             "clientSource": self.client_source,
             "clockVideoId": "",
@@ -327,9 +317,7 @@ class MingShiClass:
                 if result.get("header", {}).get("code") == "200":
                     # 使用divmod函数进行转换
                     minutes, sec = divmod(time_point, 60)
-                    print(
-                        f"  提交学习记录成功: 本次从{minutes}分{sec}秒位置开始学习，学习了{duration}秒。"
-                    )
+                    print(f"  提交学习记录成功: 本次从{minutes}分{sec}秒位置开始学习，学习了{duration}秒。")
                     return True
                 else:
                     return False
@@ -354,6 +342,10 @@ class MingShiClass:
         # 检查是否已学完
         if learn_status == 1:  # 1表示已学完
             print(f"  ✓ 已学完，跳过")
+            return True
+        # 检查是否已学过，避免更新延迟重复学习
+        if course_id in self.completed_courses:
+            print(f"  ✓ 本次已学，跳过")
             return True
 
         # 从上次学习位置继续
@@ -388,8 +380,11 @@ class MingShiClass:
 
                 # 检查是否学完
                 if total_learned >= duration:
-                    print(f"  ✓ 学习完成!")
+                    self.completed_courses.add(course_id)
+                    print(f"  ✓ 学习完成!, 当前已学完课程ID:{self.completed_courses}")
                     return True
+                
+                
             else:
                 print(f"  [警告] 提交学习记录失败")
 
@@ -414,7 +409,7 @@ def main():
     # 创建客户端
     file_size_at_path = "a9b7ba70783b617e9998dc4dd82eb3c5"      # 可能需要修改
     client = MingShiClass(file_size_at_path)
-    mobile = "130xxxxxxx"                                      # 需要修改
+    mobile = "13088960093"                                      # 需要修改
     password = "wuyanan123"                                     # 需要修改
 
     login_result = client.login(mobile, password)
@@ -429,13 +424,13 @@ def main():
     # 2. 获取课程列表（第一页）
     course_result = client.get_course_list(pageindex=1, count_of_page=20)
 
-    if course_result.get("success"):
-        print("\n" + "=" * 60)
-        print("【课程列表获取完成】")
-        # 保存课程列表到文件
-        with open("course_list.json", "w", encoding="utf-8") as f:
-            json.dump(course_result.get("data", {}), f, ensure_ascii=False, indent=2)
-        print("\n课程数据已保存到 course_list.json")
+    # if course_result.get("success"):
+    #     print("\n" + "=" * 60)
+    #     print("【课程列表获取完成】")
+    #     # 保存课程列表到文件
+    #     with open("course_list.json", "w", encoding="utf-8") as f:
+    #         json.dump(course_result.get("data", {}), f, ensure_ascii=False, indent=2)
+    #     print("\n课程数据已保存到 course_list.json")
 
     # 4. 显示所有课程ID（便于后续操作）
     if course_result.get("success"):
@@ -453,7 +448,6 @@ def main():
                 shixunCourseList = client.get_course_details(course.get("coursepackId"))
                 for shixunCourse in shixunCourseList:
                     client.learn_course(course=shixunCourse)
-
 
 if __name__ == "__main__":
     main()
